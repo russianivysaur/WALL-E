@@ -134,7 +134,8 @@ func (wal *Wal) writeLog(data []byte) error {
 	if err != nil {
 		return err
 	}
-	checksum := crc32.ChecksumIEEE(append(data, lsnBuffer...))
+	crcBytes := append(lsnBuffer, data...)
+	checksum := crc32.ChecksumIEEE(crcBytes)
 	entry := &Entry{
 		Lsn:      lsn,
 		Data:     data,

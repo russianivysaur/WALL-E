@@ -2,6 +2,7 @@ package walle
 
 import (
 	"fmt"
+	"hash/crc32"
 	"io"
 	"os"
 	"path/filepath"
@@ -52,4 +53,8 @@ func getFirstSegmentFile(files []string, directory string) (*os.File, error) {
 		return nil, err
 	}
 	return file, err
+}
+
+func verifyChecksum(data []byte, entry *Entry) bool {
+	return crc32.ChecksumIEEE(data) == entry.Checksum
 }

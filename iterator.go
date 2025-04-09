@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 )
 
+var ErrCorruptedEntry error = errors.New("crc32 checksum does not match")
+
 // Iterator
 // Returns log entries as a struct
 type Iterator struct {
@@ -56,6 +58,13 @@ func (iterator *Iterator) Next() (*Entry, error) {
 	var entry Entry
 	if err := proto.Unmarshal(entryBytes, &entry); err != nil {
 		return nil, err
+	}
+	crcBuffer := make([]byte, 8)
+	if _, err := binary.Encode(crcBuffer, binary.BigEndian, entry.Lsn); err != nil {
+		return nil, err
+	}
+	if !verifyChecksum(append(crcBuffer, entry.Data...), &entry) {
+		return nil, ErrCorruptedEntry
 	}
 	return &entry, nil
 }
