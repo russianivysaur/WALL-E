@@ -1,0 +1,9 @@
+syntax = "proto3";
+package walle;
+option go_package = ".";
+
+message Entry{
+  int64 lsn = 1;
+  bytes data = 2;
+  uint32 checksum = 3;
+}
