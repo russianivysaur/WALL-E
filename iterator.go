@@ -13,8 +13,9 @@ import (
 // Iterator
 // Returns log entries as a struct
 type Iterator struct {
-	currentOffset  uint64
-	currentSegment *os.File
+	currentSegmentNumber uint64
+	currentSegment       *os.File
+	directory            string
 }
 
 var ErrEndOfLog error = errors.New("end of log")
@@ -26,8 +27,9 @@ func NewIterator(directory string) (*Iterator, error) {
 	}
 	segmentFile, err := getFirstSegmentFile(logFiles, directory)
 	return &Iterator{
-		currentOffset:  0,
-		currentSegment: segmentFile,
+		directory:            directory,
+		currentSegmentNumber: 0,
+		currentSegment:       segmentFile,
 	}, nil
 }
 
@@ -40,10 +42,10 @@ func (iterator *Iterator) Next() (*Entry, error) {
 			if err := iterator.jumpSegment(); err != nil {
 				return nil, err
 			}
+			return iterator.Next()
 		}
 	}
 	size := binary.BigEndian.Uint64(sizeBytes)
-	fmt.Printf("entry size %d", size)
 	entryBytes := make([]byte, size)
 	if n, err := iterator.currentSegment.Read(entryBytes); err != nil || uint64(n) != size {
 		if err != nil {
@@ -55,10 +57,19 @@ func (iterator *Iterator) Next() (*Entry, error) {
 	if err := proto.Unmarshal(entryBytes, &entry); err != nil {
 		return nil, err
 	}
-	iterator.currentOffset++
 	return &entry, nil
 }
 
 func (iterator *Iterator) jumpSegment() error {
+	nextSegmentName := filepath.Join(iterator.directory, fmt.Sprintf("%s%d", segmentFilePrefix, iterator.currentSegmentNumber+1))
+	file, err := os.OpenFile(nextSegmentName, os.O_RDONLY, 0777)
+	if errors.Is(err, os.ErrNotExist) {
+		return ErrEndOfLog
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+	iterator.currentSegment = file
+	iterator.currentSegmentNumber++
 	return nil
 }

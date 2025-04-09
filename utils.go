@@ -36,7 +36,6 @@ func getFirstSegmentFile(files []string, directory string) (*os.File, error) {
 	highestSegmentNumber := 0
 	for _, path := range files {
 		_, filename := filepath.Split(path)
-		fmt.Println(filename)
 		segmentNumber, err := strconv.Atoi(strings.TrimPrefix(filename, segmentFilePrefix))
 		if err != nil {
 			return nil, err
